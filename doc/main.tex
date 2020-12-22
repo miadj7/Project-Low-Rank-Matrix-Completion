@@ -8,6 +8,9 @@
 \usepackage[margin=1in]{geometry} 
 \usepackage{amsmath,amsthm,amssymb, mathtools}
 \usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{float}
+\graphicspath{./data/}
 
 
 
@@ -134,10 +137,70 @@ Another problem that illustrates the computational advantage of the Conditional 
 \end{equation}
 It can be shown that the minimizer of the internal subproblem is $S^{(k)} = - \mathbf{u}\mathbf{v}^\top$, where $\mathbf{u}$ and $\mathbf{v}$ are (respectively) the leading left and right singular vectors of $\nabla f(X^{(k)})$. Thus, one only needs to compute (or approximate) the leading singular vectors, while the complete SVD is necessary to perform the Projected Gradient Method. A list of some other optimization domains and their respective computational complexities can be found in Table 1 of \cite{J}.
 
+\section{Low-Rank Matrix Completion: Factored Updates}
+
+\section{Dual Version with Primal Recovery}
+In Fan et al. \cite{FJSF}, the authors propose a dual version of the Frank-Wolfe method (aka Conditional Gradient) for the constrained least-squares problem
+\begin{equation*}
+    \min_{\mathbf{x} \in \hat{\mathcal{A}}} \frac{1}{2} ||M\mathbf{x} - \mathbf{b}||_2^2.
+\end{equation*}
+The algorithm 6.3, instead of tracking the primal iterates $\mathbf{x}^{(k)}$, attempts to find the optimal negative gradient $\mathbf{z}^{*} = - \nabla f(\mathbf{x}^{*})$ through iterations $\mathbf{z}^{(k)} \rightarrow \mathbf{z}^{*}$. In each iteration, the intermediate vectors are to satisfy
+
+    \begin{align*}
+        \mathbf{r}^{(k)} &= \mathbf{b} - M \mathbf{x}^{(k)}, \\
+        \mathbf{z}^{(k)} &= M^* \mathbf{r}^{(k)}, \\
+        \mathbf{p}^{(k)} &= M\mathbf{a}^{(k)}, \quad \quad \mathbf{a}^{(k)} \in \mathcal{F}_{\mathcal{A}}(\mathbf{z}^{(k)}), \\
+        \mathbf{q}^{(k)} &= M\mathbf{x}^{(k)}, \\
+        \Delta \mathbf{r}^{(k)} &= \mathbf{p}^{(k)} - \mathbf{q}^{(k)}.
+    \end{align*}
+
+When the desired optimality condition is met after $K$ iterations, one finds the primal optimal solution as
+\begin{equation*}
+    \mathbf{x}^{(K)} \in \mathrm{argmin}_{\mathbf{x}} \{||M\mathbf{x} - \mathbf{b}||_2^2 \; | \; \mathcal{S}_{\mathcal{A}}(\mathbf{x}) \subseteq \tau \mathcal{E}_{\mathcal{A}}(\mathbf{z}^{(K)})\}.
+\end{equation*}
+
+A useful special case is the problem of low-rank matrix completion, where the "low-rank"ness is encouraged by constraining the nuclear norm:
+\begin{equation*}
+    \min_{X \in \mathbb{R}^{m \times n}} \frac{1}{2} ||\Omega \circ X - B||_{F}^2 \quad \mathrm{s.t.} \: ||X||_{*} \leq \tau.
+\end{equation*}
+The problems most prevalently arises in recommender systems, where the zero-one mask $\Omega$ encodes whether or not the user $i$ has rated the product $j$. The algorithm 6.4 of \cite{FJSF} specializes the more general algorithm 6.3 for the low-rank matrix estimation problem.
+
+As suggested by the writers for the implementation, we have generated the "true" underlying matrix to be the addition of a low-rank one and a gaussian "noise":
+\begin{equation*}
+    B = UV^\top + 0.1 \cdot N,
+\end{equation*}
+where $U \in \mathbb{R}^{m \times r}$, $V \in \mathbb{R}^{n \times r}$, and $N \in \mathbb{R}^{m \times n}$ are i.i.d. standard gaussian matrices. The rank $r$ is set to $\frac{m}{100}$ and the mask $\Omega$'s entries are $\mathrm{Bernoulli}(p)$ random variables. Other parameters to set are the threshold $\epsilon$ used in the optimality check, and $\ell$, the number of singular vectors to keep from the singular value decomposition of $Z^{(k)}$. In the below results $\ell = 5r$, $\tau = r$, $m = n$, and the parameters $p$ and $\epsilon$ take different values. The following plots show the error, the elapsed time, and the so-called "effective rank" of the primal solution, which is simply the number of singular values that account for the 90\% of the total Frobenius norm.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{data/p4.jpg}
+    \caption{$p = 0.25$, $\epsilon = 10^{-5}$}
+    \label{img1}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{data/p1.jpg}
+    \caption{$p = 0.25$, $\epsilon = 10^{-10}$}
+    \label{img2}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{data/p3.jpg}
+    \caption{$p = 0.1$, $\epsilon = 10^{-5}$}
+    \label{img3}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{data/p2.jpg}
+    \caption{$p = 0.1$, $\epsilon = 10^{-10}$}
+    \label{img4}
+\end{figure}
+
+
 \begin{thebibliography}{}
 \bibitem{FW} Frank, M., \& Wolfe, P. (1956). An algorithm for quadratic programming. Naval research logistics quarterly, 3(1-2), 95-110.
 
-\bibitem{DH} Dunn, J. C., \& Harshbarger, S. (1978). Conditional gradient algorithms with open loop step size rules. Jfournal of Mathematical Analysis and Applications, 62(2), 432-444.
+\bibitem{DH} Dunn, J. C., \& Harshbarger, S. (1978). Conditional gradient algorithms with open loop step size rules. Journal of Mathematical Analysis and Applications, 62(2), 432-444.
 
 \bibitem{J} Jaggi, M. (2013). Revisiting Frank-Wolfe: Projection-free sparse convex optimization. In Proceedings of the 30th international conference on machine learning (No. CONF, pp. 427-435).
 
@@ -145,6 +208,8 @@ It can be shown that the minimizer of the internal subproblem is $S^{(k)} = - \m
 
 
 \bibitem{T} Tibshirani, R. (2015). \href{http://www.stat.cmu.edu/~ryantibs/convexopt-S15/lectures/23-cond-grad.pdf}{\textit{Conditional Gradient (Frank-Wolfe) Method}}, Carnegie Mellon University, PA.
+
+\bibitem{FJSF} Fan, Z., Jeong, H., Sun, Y., \& Friedlander, M. P. (2020). Atomic Decomposition via Polar Alignment. \textit{Optimization}, 3(4), 280-366.
 
 \end{thebibliography}
 
